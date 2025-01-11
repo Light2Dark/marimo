@@ -80,7 +80,7 @@ homepage = "https://github.com/marimo-team/marimo"
 sql = [
     "duckdb>=1.0.0",
     "polars[pyarrow]>=1.9.0",
-    "sqlglot>=23.4"
+    "sqlglot>=26.0"
 ]
 
 # List of deps that are recommended for most users
@@ -103,7 +103,7 @@ dev = [
     "opentelemetry-sdk~=1.26.0",
     # For SQL
     "duckdb>=1.0.0",
-    "sqlglot>=23.4",
+    "sqlglot>=26.0",
     # For linting
     "ruff~=0.6.1",
     # For AI
@@ -234,7 +234,7 @@ extra-dependencies = [
     "hvplot~=0.11.2",
     "geopandas~=0.14.4; python_version > '3.9'",
     # FOr testing sql
-    "ibis-framework[duckdb]~=9.5.0; python_version > '3.9'",
+    "ibis-framework[duckdb]; python_version > '3.9'", # TODO: find min dependency
     # For testing mo.image
     "pillow~=10.4.0",
     "anywidget~=0.9.13",

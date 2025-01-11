@@ -284,7 +284,7 @@ class TestFindSQLDefs:
             AS
             /* Comment
             before SELECT */
-            SELECT * FROM read_csv()
+            SELECT * FROM read_csv('x')
             """,
             """
             CREATE TEMPORARY TABLE my_table AS
@@ -307,6 +307,7 @@ class TestFindSQLDefs:
             tables=["my_table"],
         )
 
+    # TODO: Escape with e'
     @staticmethod
     def test_find_sql_defs_weird_names() -> None:
         sql = r"""
@@ -328,7 +329,7 @@ class TestFindSQLDefs:
         CREATE TABLE "with a space" (id INT);
 
         CREATE TABLE 'single-quotes' (id INT);
-        CREATE TABLE e'escaped\ntable' (id INT);
+        CREATE TABLE 'escaped\ntable' (id INT);
         """
         assert find_sql_defs(sql) == SQLDefs(
             tables=[

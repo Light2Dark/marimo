@@ -166,6 +166,106 @@ def find_sql_defs(sql_statement: str) -> SQLDefs:
     reffed_catalogs: list[str] = []
     i = 0
 
+    if not DependencyManager.sqlglot.has():
+        return SQLDefs()
+
+    from sqlglot import exp, parse
+    from sqlglot.errors import ParseError
+
+    try:
+        expression_list = parse(sql_statement, dialect="duckdb")
+    except ParseError as e:
+        LOGGER.error(f"Unable to parse SQL. Error: {e}")
+        return SQLDefs()
+
+    for expression in expression_list:
+        if expression is None:
+            continue
+
+        for ddl_expr in expression.find_all(exp.Create, exp.Alter, exp.Drop):
+            table_expr = ddl_expr.find(exp.Table)
+            if table_expr is None:
+                continue
+
+            # Expression can either be:
+            # - catalog.schema.table
+            # - catalog.table (this is shorthand for catalog.main.table) -> in this case, catalog will be interpreted as schema by sqlglot
+            if hasattr(ddl_expr, "kind"):
+                if ddl_expr.kind == "VIEW":
+                    created_views.append(table_expr.name)
+                    if table_expr.db and not table_expr.catalog:
+                        # treat this as catalog
+                        reffed_catalogs.append(table_expr.db)
+                        continue
+                    if table_expr.catalog:
+                        reffed_catalogs.append(table_expr.catalog)
+                    if table_expr.db:
+                        reffed_schemas.append(table_expr.db)
+
+                elif ddl_expr.kind == "TABLE":
+                    created_tables.append(table_expr.name)
+                    if table_expr.db and not table_expr.catalog:
+                        # treat this as catalog
+                        reffed_catalogs.append(table_expr.db)
+                        continue
+                    if table_expr.catalog:
+                        reffed_catalogs.append(table_expr.catalog)
+                    if table_expr.db:
+                        reffed_schemas.append(table_expr.db)
+
+                elif ddl_expr.kind == "SCHEMA":
+                    created_schemas.append(table_expr.db)
+                    if table_expr.catalog:
+                        reffed_catalogs.append(table_expr.catalog)
+
+                elif ddl_expr.kind == "DATABASE":
+                    created_catalogs.append(table_expr.name)
+
+        # if attach, we add the alias if exist.
+        # catalog:alias. if there is ':', we add the alias
+        # else, add catalog
+        # TODO: Detach?
+        for attach_expr in expression.find_all(exp.Attach):
+            if attach_expr.name:
+                # sqlglot doesn't breakdown catalog for attach
+                name = attach_expr.name
+                catalog: Optional[str] = None
+                if "." in name:
+                    catalog = attach_expr.name.split(".")[0]
+                elif ":" in name:
+                    catalog = attach_expr.name.split(":")[-1]
+
+                if catalog:
+                    created_catalogs.append(catalog)
+
+            # could be defined as alias
+            aliased = attach_expr.find(exp.Alias)
+            if aliased:
+                created_catalogs.append(aliased.alias_or_name)
+
+    # removes duplicates while preserving order
+    created_catalogs = list(dict.fromkeys(created_catalogs))
+    created_tables = list(dict.fromkeys(created_tables))
+    created_schemas = list(dict.fromkeys(created_schemas))
+    reffed_catalogs = list(dict.fromkeys(reffed_catalogs))
+    reffed_schemas = list(dict.fromkeys(reffed_schemas))
+
+    # Remove 'memory' from catalogs, as this is the default and doesn't have a def
+    if "memory" in reffed_catalogs:
+        reffed_catalogs.remove("memory")
+    # Remove 'main' from schemas, as this is the default and doesn't have a def
+    if "main" in reffed_schemas:
+        reffed_schemas.remove("main")
+
+    return SQLDefs(
+        tables=created_tables,
+        views=created_views,
+        schemas=created_schemas,
+        catalogs=created_catalogs,
+        reffed_schemas=reffed_schemas,
+        reffed_catalogs=reffed_catalogs,
+    )
+
     # See
     #
     #   https://duckdb.org/docs/sql/statements/create_table#syntax

@@ -23,8 +23,8 @@ const htmlDevPlugin = (): Plugin => {
       // Add react-scan in dev mode
       if (isDev) {
         html = html.replace(
-          "<head>",
-          '<head>\n<script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>',
+          // "<head>",
+          // '<head>\n<script src="https://unpkg.com/react-scan/dist/auto.global.js"></script>',
         );
       }
 
