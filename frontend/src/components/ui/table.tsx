@@ -3,6 +3,26 @@ import * as React from "react";
 
 import { cn } from "@/utils/cn";
 
+const TableContainer = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={className} {...props} />
+));
+TableContainer.displayName = "TableContainer";
+
+const Table2 = React.forwardRef<
+  HTMLTableElement,
+  React.HTMLAttributes<HTMLTableElement>
+>(({ className, ...props }, ref) => (
+  <table
+    ref={ref}
+    className={cn("w-full caption-bottom text-sm", className)}
+    {...props}
+  />
+));
+Table2.displayName = "Table2";
+
 const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
@@ -111,7 +131,9 @@ const TableCaption = React.forwardRef<
 TableCaption.displayName = "TableCaption";
 
 export {
+  TableContainer,
   Table,
+  Table2,
   TableHeader,
   TableBody,
   TableFooter,

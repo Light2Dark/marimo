@@ -114,7 +114,7 @@ export function renderTableBody<TData>(
   );
 }
 
-function getPinningStyles<TData>(
+export function getPinningStyles<TData>(
   column: Column<TData>,
 ): React.HTMLAttributes<HTMLElement> {
   const isPinned = column.getIsPinned();

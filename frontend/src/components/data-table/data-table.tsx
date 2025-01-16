@@ -3,10 +3,11 @@
 // tanstack/table is not compatible with React compiler
 // https://github.com/TanStack/table/issues/5567
 
-import React, { memo } from "react";
+import React, { memo, useRef } from "react";
 import {
   type ColumnDef,
   type ColumnFiltersState,
+  flexRender,
   ColumnPinning,
   getCoreRowModel,
   getFilteredRowModel,
@@ -17,14 +18,27 @@ import {
   type RowSelectionState,
   type SortingState,
   useReactTable,
+  Row,
+  Cell,
 } from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
-import { Table } from "@/components/ui/table";
+import {
+  Table,
+  Table2,
+  TableCell,
+  TableContainer,
+  TableRow,
+} from "@/components/ui/table";
 import type { DownloadActionProps } from "./download-actions";
 import { cn } from "@/utils/cn";
 import { FilterPills } from "./filter-pills";
 import { useColumnPinning } from "./hooks/useColumnPinning";
-import { renderTableHeader, renderTableBody } from "./renderers";
+import {
+  renderTableHeader,
+  renderTableBody,
+  getPinningStyles,
+} from "./renderers";
 import { SearchBar } from "./SearchBar";
 import { TableActions } from "./TableActions";
 import { ColumnFormattingFeature } from "./column-formatting/feature";
@@ -150,6 +164,43 @@ const DataTableInternal = <TData,>({
     onColumnPinningChange: setColumnPinning,
   });
 
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const { rows } = table.getRowModel();
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    estimateSize: () => 33, //estimate row height for accurate scrollbar dragging
+    getScrollElement: () => tableContainerRef.current,
+    //measure dynamic row height, except in firefox because it measures table border height incorrectly
+    measureElement:
+      typeof window !== "undefined" &&
+      navigator.userAgent.indexOf("Firefox") === -1
+        ? (element) => element?.getBoundingClientRect().height
+        : undefined,
+    overscan: 5,
+  });
+
+  const renderCells = (row: Row<TData>, cells: Array<Cell<TData, unknown>>) => {
+    return cells.map((cell) => {
+      const { className, style } = getPinningStyles(cell.column);
+      return (
+        <TableCell
+          key={cell.id}
+          className={cn(
+            "whitespace-pre truncate max-w-[300px]",
+            cell.column.getColumnWrapping &&
+              cell.column.getColumnWrapping() === "wrap" &&
+              "whitespace-pre-wrap min-w-[200px]",
+            className,
+          )}
+          style={style}
+          title={String(cell.getValue())}
+        >
+          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+        </TableCell>
+      );
+    });
+  };
+
   return (
     <div className={cn(wrapperClassName, "flex flex-col space-y-1")}>
       <FilterPills filters={filters} table={table} />
@@ -163,10 +214,88 @@ const DataTableInternal = <TData,>({
             reloading={reloading}
           />
         )}
-        <Table>
+        {/* <Table>
           {renderTableHeader(table)}
           {renderTableBody(table, columns)}
-        </Table>
+        </Table> */}
+
+        <TableContainer
+          ref={tableContainerRef}
+          className="overflow-auto relative h-[400px]"
+        >
+          <Table2 className="grid">
+            {renderTableHeader(table)}
+            <tbody
+              style={{
+                display: "grid",
+                height: `${rowVirtualizer.getTotalSize()}px`, //tells scrollbar how big the table is
+                position: "relative", //needed for absolute positioning of rows
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const row = rows[virtualRow.index] as Row;
+                return (
+                  <TableRow
+                    className="flex absolute"
+                    style={{
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    onClick={() => {
+                      if (table.getIsSomeRowsSelected()) {
+                        row.toggleSelected();
+                      }
+                    }}
+                  >
+                    {renderCells(row, row.getLeftVisibleCells())}
+                    {renderCells(row, row.getCenterVisibleCells())}
+                    {renderCells(row, row.getRightVisibleCells())}
+                  </TableRow>
+                );
+              })}
+            </tbody>
+          </Table2>
+        </TableContainer>
+
+        {/* <div
+          ref={tableContainerRef}
+          className="overflow-auto relative h-[400px]"
+        >
+          <table className="grid">
+            {renderTableHeader(table)}
+            <tbody
+              style={{
+                display: "grid",
+                height: `${rowVirtualizer.getTotalSize()}px`, //tells scrollbar how big the table is
+                position: "relative", //needed for absolute positioning of rows
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const row = rows[virtualRow.index] as Row;
+                return (
+                  <TableRow
+                    className="flex absolute"
+                    style={{
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    onClick={() => {
+                      if (table.getIsSomeRowsSelected()) {
+                        row.toggleSelected();
+                      }
+                    }}
+                  >
+                    {renderCells(row, row.getLeftVisibleCells())}
+                    {renderCells(row, row.getCenterVisibleCells())}
+                    {renderCells(row, row.getRightVisibleCells())}
+                  </TableRow>
+                );
+              })}
+            </tbody>
+          </table>
+        </div> */}
       </div>
       <TableActions
         enableSearch={enableSearch}
