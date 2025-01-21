@@ -87,7 +87,7 @@ const LazyComponent = ({
 
   return (
     <div ref={ref} className="min-h-4">
-      {loading && !data && showLoadingIndicator ? (
+      {loading && showLoadingIndicator ? (
         <Loader2Icon className="w-12 h-12 animate-spin text-primary my-4 mx-4" />
       ) : (
         data && renderHTML({ html: data.html })
