@@ -54,6 +54,7 @@ import {
 import type { ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { useTheme } from "@/theme/useTheme";
 import { moveToEndOfEditor } from "@/core/codemirror/utils";
+import { unwrapMarimoChatHTML } from "@/plugins/core/parseHTML";
 
 interface Props {
   prompts: string[];
@@ -93,12 +94,21 @@ export const Chatbot: React.FC<Props> = (props) => {
         messages: Message[];
       };
       try {
-        const response = await props.sendPrompt({
-          messages: body.messages.map((m) => ({
-            role: m.role as ChatRole,
-            content: m.content,
-            attachments: m.experimental_attachments,
-          })),
+        const response = await props.send_prompt({
+          messages: body.messages.map((m) => {
+            let content: string | null = null;
+            if (m.role === "assistant") {
+              // The backend wraps the content in HTML to render on the frontend
+              // We should unwrap it before sending it back to the backend
+              content = unwrapMarimoChatHTML(m.content);
+              console.log("assistant content", content);
+            }
+            return {
+              role: m.role as ChatRole,
+              content: content || m.content,
+              attachments: m.experimental_attachments,
+            };
+          }),
           config: {
             max_tokens: config.max_tokens,
             temperature: config.temperature,
