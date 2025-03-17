@@ -5,6 +5,7 @@ import asyncio
 import contextlib
 import functools
 import io
+import os
 import signal
 import threading
 import traceback
@@ -14,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 from marimo._ast.cell import CellImpl
 from marimo._ast.variables import unmangle_local
 from marimo._config.config import ExecutionType, OnCellChangeType
+from marimo._dependencies.dependencies import DependencyManager
 from marimo._dependencies.errors import ManyModulesNotFoundError
 from marimo._loggers import marimo_logger
 from marimo._messaging.errors import (
@@ -429,6 +431,32 @@ class Runner:
                 unwrapped_exception,
                 (ModuleNotFoundError, ManyModulesNotFoundError),
             ):
+                # There is a chance that the user has a library and a file with the same name
+                if isinstance(unwrapped_exception, ModuleNotFoundError):
+                    try:
+                        module_name = getattr(unwrapped_exception, "name", "")
+                        module_name = module_name.split(".")[0]
+
+                        python_files = [
+                            file.split(".")[0]
+                            for file in os.listdir()
+                            if file.endswith(".py")
+                        ]
+                        if (
+                            module_name in python_files
+                            and DependencyManager.has(module_name)
+                        ):
+                            error_message = f"Error: You have a file named '{module_name}.py' which conflicts with the imported package. Please rename the file."
+                            output = MarimoExceptionRaisedError(
+                                error_message,
+                                unwrapped_exception.__class__.__name__,
+                                None,
+                            )
+                            LOGGER.error(error_message)
+                            exception = output
+                    except Exception as e:
+                        pass
+
                 self.missing_packages = True
 
             elif isinstance(unwrapped_exception, MarimoStopError):
