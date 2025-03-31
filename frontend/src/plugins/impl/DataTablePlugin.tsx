@@ -47,6 +47,10 @@ import { DATA_TYPES } from "@/core/kernel/messages";
 import { useEffectSkipFirstRender } from "@/hooks/useEffectSkipFirstRender";
 import type { CellSelectionState } from "@/components/data-table/cell-selection/types";
 import type { CellStyleState } from "@/components/data-table/cell-styling/types";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TableIcon } from "lucide-react";
+import { AddTabContextMenu } from "@/components/data-table/chart-transforms";
+import { getFeatureFlag } from "@/core/config/feature-flag";
 
 type CsvURL = string;
 type TableData<T> = T[] | CsvURL;
@@ -432,25 +436,62 @@ export const LoadingDataTableComponent = memo(
       );
     }
 
+    const experimentalTableFeature = getFeatureFlag("experimental_data_table");
+
+    if (!experimentalTableFeature) {
+      return (
+        <>
+          {errorComponent}
+          <DataTableComponent
+            {...props}
+            data={data?.rows ?? Arrays.EMPTY}
+            columnSummaries={columnSummaries}
+            sorting={sorting}
+            setSorting={setSorting}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            filters={filters}
+            setFilters={setFilters}
+            reloading={loading}
+            totalRows={data?.totalRows ?? props.totalRows}
+            paginationState={paginationState}
+            setPaginationState={setPaginationState}
+            cellStyles={data?.cellStyles ?? props.cellStyles}
+          />
+        </>
+      );
+    }
+
     return (
       <>
         {errorComponent}
-        <DataTableComponent
-          {...props}
-          data={data?.rows ?? Arrays.EMPTY}
-          columnSummaries={columnSummaries}
-          sorting={sorting}
-          setSorting={setSorting}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          filters={filters}
-          setFilters={setFilters}
-          reloading={loading}
-          totalRows={data?.totalRows ?? props.totalRows}
-          paginationState={paginationState}
-          setPaginationState={setPaginationState}
-          cellStyles={data?.cellStyles ?? props.cellStyles}
-        />
+        <Tabs defaultValue="table">
+          <TabsList>
+            <TabsTrigger className="text-xs py-1" value="table">
+              <TableIcon className="w-3 h-3 mr-2" />
+              Table
+            </TabsTrigger>
+            <AddTabContextMenu />
+          </TabsList>
+          <TabsContent className="mt-1 overflow-hidden" value="table">
+            <DataTableComponent
+              {...props}
+              data={data?.rows ?? Arrays.EMPTY}
+              columnSummaries={columnSummaries}
+              sorting={sorting}
+              setSorting={setSorting}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              filters={filters}
+              setFilters={setFilters}
+              reloading={loading}
+              totalRows={data?.totalRows ?? props.totalRows}
+              paginationState={paginationState}
+              setPaginationState={setPaginationState}
+              cellStyles={data?.cellStyles ?? props.cellStyles}
+            />
+          </TabsContent>
+        </Tabs>
       </>
     );
   },
