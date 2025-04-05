@@ -1380,9 +1380,7 @@ export const UserConfigForm: React.FC = () => {
               render={({ field }) => (
                 <div className="flex flex-col gap-y-1">
                   <FormItem className={formItemClasses}>
-                    <FormLabel className="font-normal">
-                      Table Transform & Charts
-                    </FormLabel>
+                    <FormLabel className="font-normal">Table Charts</FormLabel>
                     <FormControl>
                       <Checkbox
                         data-testid="data-table-plugin-checkbox"
@@ -1392,8 +1390,7 @@ export const UserConfigForm: React.FC = () => {
                     </FormControl>
                   </FormItem>
                   <FormDescription>
-                    Enable experimental transform and charting feature on
-                    tables.
+                    Enable experimental charting feature on tables.
                   </FormDescription>
                 </div>
               )}
